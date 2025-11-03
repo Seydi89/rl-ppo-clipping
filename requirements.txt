@@ -5,3 +5,4 @@ seaborn
 pandas
 stable-baselines3
 gymnasium
+gradio 

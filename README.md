@@ -1,3 +1,9 @@
-# rl-ppo-clipping
-
-Demo implementation : https://colab.research.google.com/drive/1R1rsuHrkC7B_fCn5sxjEcV4vYgkaZlqp?usp=sharing
+---
+title: PPO Project 22 – PPO Clipping Analysis
+emoji: 🧪
+colorFrom: teal
+colorTo: blue
+sdk: gradio
+app_file: app.py
+pinned: false
+---

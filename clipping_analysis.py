@@ -241,3 +241,102 @@ def run_experiment(
             env.close()
 
     return results
+
+#------------Experiment for varying clip_range------------#
+
+def run_clip_range_sweep(
+    env_name: str = "CartPole-v1",
+    clip_ranges: List[float] = [0.1, 0.2, 0.3],
+    n_epochs: int = 10,
+    total_timesteps: int = 50000,
+    n_seeds: int = 3
+):
+    """
+    Runs the PPO experiment with different `clip_range` values to analyze clipping.
+    """
+    results = []
+
+    for clip_range in clip_ranges:
+        print(f"\n{'='*80}")
+        print(f"EXPERIMENT: Training with clip_range = {clip_range}")
+        print(f"{'='*80}")
+
+        for seed in range(n_seeds):
+            print(f"\n--- Running Seed {seed+1}/{n_seeds} ---")
+
+            env = DummyVecEnv([lambda: gym.make(env_name)])
+            callback = ClippingAnalysisCallback(verbose=1)
+
+            model = PPO(
+                "MlpPolicy",
+                env,
+                n_epochs=n_epochs,
+                clip_range=clip_range,
+                n_steps=2048,
+                batch_size=64,
+                verbose=0,
+                seed=seed
+            )
+
+            model.learn(total_timesteps=total_timesteps, callback=callback)
+
+            results.append({
+                'clip_range': clip_range,
+                'n_epochs': n_epochs,
+                'seed': seed,
+                'callback': callback,
+                'final_return': np.mean(callback.update_stats['returns'][-10:]) if callback.update_stats['returns'] else 0
+            })
+            env.close()
+
+    return results
+
+#------------Experiment 3: Varying both clip_range AND n_epochs------------#
+
+def run_combined_sweep(
+    env_name: str = "CartPole-v1",
+    clip_ranges: List[float] = [0.1, 0.2, 0.3],
+    n_epochs_list: List[int] = [3, 10, 20],
+    total_timesteps: int = 50000,
+    n_seeds: int = 3
+):
+    """
+    Runs the PPO experiment varying BOTH `clip_range` and `n_epochs` to analyze their interaction.
+    """
+    results = []
+
+    for clip_range in clip_ranges:
+        for n_epochs in n_epochs_list:
+            print(f"\n{'='*80}")
+            print(f"EXPERIMENT 3: clip_range = {clip_range}, n_epochs = {n_epochs}")
+            print(f"{'='*80}")
+
+            for seed in range(n_seeds):
+                print(f"\n--- Running Seed {seed+1}/{n_seeds} ---")
+
+                env = DummyVecEnv([lambda: gym.make(env_name)])
+                callback = ClippingAnalysisCallback(verbose=1)
+
+                model = PPO(
+                    "MlpPolicy",
+                    env,
+                    n_epochs=n_epochs,
+                    clip_range=clip_range,
+                    n_steps=2048,
+                    batch_size=64,
+                    verbose=0,
+                    seed=seed
+                )
+
+                model.learn(total_timesteps=total_timesteps, callback=callback)
+
+                results.append({
+                    'clip_range': clip_range,
+                    'n_epochs': n_epochs,
+                    'seed': seed,
+                    'callback': callback,
+                    'final_return': np.mean(callback.update_stats['returns'][-10:]) if callback.update_stats['returns'] else 0
+                })
+                env.close()
+
+    return results

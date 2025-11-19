@@ -43,7 +43,7 @@ def analyze_results(results: List[Dict]):
             marker='o',
             ax=ax,
             palette='viridis',
-            ci='sd'
+            errorbar='sd'
         )
 
     ax.set_title('Clipping Frequency Increases with Each Epoch', fontsize=14)
@@ -63,7 +63,7 @@ def analyze_results(results: List[Dict]):
             y='Final Return',
             marker='o',
             ax=ax,
-            ci='sd',
+            errorbar='sd',
             err_style="band"
         )
 
@@ -131,7 +131,7 @@ def analyze_results(results: List[Dict]):
             marker='o',
             ax=ax,
             palette='viridis',
-            ci='sd'
+            errorbar='sd'
         )
         ax.set_yscale('log')
 
@@ -166,7 +166,7 @@ def analyze_results(results: List[Dict]):
             hue='n_epochs',
             palette='viridis',
             ax=ax,
-            ci='sd'
+            errorbar='sd'
         )
 
     ax.set_title('Learning Curves', fontsize=14)
@@ -298,7 +298,7 @@ def analyze_clip_sweep_results_detailed(results: List[Dict]):
             marker='o',
             ax=ax,
             palette='viridis',
-            ci='sd'
+            errorbar='sd'
         )
 
     ax.set_title('Clipping Frequency vs. Epoch (Different Clip Ranges)', fontsize=14)
@@ -318,7 +318,7 @@ def analyze_clip_sweep_results_detailed(results: List[Dict]):
             y='Final Return',
             marker='o',
             ax=ax,
-            ci='sd',
+            errorbar='sd',
             err_style="band",
             color='steelblue'
         )
@@ -387,7 +387,7 @@ def analyze_clip_sweep_results_detailed(results: List[Dict]):
             marker='o',
             ax=ax,
             palette='viridis',
-            ci='sd'
+            errorbar='sd'
         )
         ax.set_yscale('log')
 
@@ -422,7 +422,7 @@ def analyze_clip_sweep_results_detailed(results: List[Dict]):
             hue='clip_range',
             palette='viridis',
             ax=ax,
-            ci='sd'
+            errorbar='sd'
         )
 
     ax.set_title('Learning Curves', fontsize=14)
@@ -543,10 +543,14 @@ def analyze_combined_sweep_results(results: List[Dict]):
         .agg(
             mean_return=("final_return", "mean"),
             std_return=("final_return", "std"),
-            mean_clip_fraction=("mean_clip_fraction", "mean")
+            mean_clip_fraction=("mean_clip_fraction", "mean"),
+            n_runs=("final_return", "count")
         )
         .reset_index()
     )
+
+    summary['std_return'] = summary['std_return'].fillna(0)
+    summary = summary[summary['n_runs'] > 0]
 
     # Create figure with 2x3 subplots
     fig = plt.figure(figsize=(20, 12))
@@ -563,7 +567,7 @@ def analyze_combined_sweep_results(results: List[Dict]):
     # 2. Heatmap: Std of Final Return (variability)
     ax2 = plt.subplot(2, 3, 2)
     pivot_std = summary.pivot(index="n_epochs", columns="clip_range", values="std_return")
-    sns.heatmap(pivot_std, annot=True, fmt=".2f", cmap="YlOrRd", ax=ax2, cbar_kws={'label': 'Std Dev'})
+    sns.heatmap(pivot_std, annot=True, fmt=".2f", cmap="YlOrRd", ax=ax2, cbar_kws={'label': 'Std Dev'}, linewidths=0.5, linecolor='gray')
     ax2.set_title("Return Variability (Lower is Better)", fontsize=14)
     ax2.set_ylabel("Number of Epochs", fontsize=12)
     ax2.set_xlabel("Clip Range (ε)", fontsize=12)

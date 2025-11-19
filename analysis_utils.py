@@ -8,8 +8,8 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 from typing import List, Dict
-
-
+from collections import defaultdict
+from scipy.interpolate import griddata
 def analyze_results(results: List[Dict]):
     """
     Analyzes and visualizes the results from the PPO clipping frequency experiment.
@@ -215,8 +215,6 @@ def print_summary_results(results: List[Dict]):
     - Average clipping fractions per epoch (if available)
     - Average KL divergences per epoch (if available)
     """
-    import numpy as np
-    from collections import defaultdict
 
     print("\n" + "=" * 100)
     print(" " * 30 + "PPO CLIPPING ANALYSIS SUMMARY")
@@ -585,7 +583,7 @@ def analyze_combined_sweep_results(results: List[Dict]):
     Z = summary['mean_return'].values
     
     # Create meshgrid for surface
-    from scipy.interpolate import griddata
+
     xi = np.linspace(X.min(), X.max(), 20)
     yi = np.linspace(Y.min(), Y.max(), 20)
     Xi, Yi = np.meshgrid(xi, yi)

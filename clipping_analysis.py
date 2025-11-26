@@ -11,6 +11,7 @@ import seaborn as sns
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.monitor import Monitor
 import gymnasium as gym
 from typing import Dict, List
 from collections import defaultdict
@@ -49,14 +50,14 @@ class ClippingAnalysisCallback(BaseCallback):
         This is called at the end of each rollout collection (before the update).
         We use it to log the mean return and episode length from the latest episodes.
         """
-        if len(self.model.ep_info_buffer) > 0:
-            # Calculate mean return and length from the episode info buffer
-            mean_return = np.mean([ep_info['r'] for ep_info in self.model.ep_info_buffer])
-            mean_length = np.mean([ep_info['l'] for ep_info in self.model.ep_info_buffer])
+        if self.model.ep_info_buffer:
+            new_returns = [ep_info['r'] for ep_info in self.model.ep_info_buffer]
+            mean_return = np.mean(new_returns)
             self.update_stats['returns'].append(mean_return)
-            self.update_stats['episode_lengths'].append(mean_length)
-        # We always log timesteps to keep data aligned
-        self.update_stats['timesteps'].append(self.num_timesteps)
+            self.update_stats['timesteps'].append(self.num_timesteps)
+            self.model.ep_info_buffer.clear()
+
+        pass
 
     def _on_training_start(self) -> None:
         """
@@ -216,7 +217,10 @@ def run_experiment(
         for seed in range(n_seeds):
             print(f"\n--- Running Seed {seed+1}/{n_seeds} ---")
 
-            env = DummyVecEnv([lambda: gym.make(env_name)])
+            def make_monitor_env():
+                return Monitor(gym.make(env_name))
+
+            env = DummyVecEnv([make_monitor_env])
             callback = ClippingAnalysisCallback(verbose=1)
 
             model = PPO(
@@ -264,7 +268,10 @@ def run_clip_range_sweep(
         for seed in range(n_seeds):
             print(f"\n--- Running Seed {seed+1}/{n_seeds} ---")
 
-            env = DummyVecEnv([lambda: gym.make(env_name)])
+            def make_monitor_env():
+                return Monitor(gym.make(env_name))
+
+            env = DummyVecEnv([make_monitor_env])
             callback = ClippingAnalysisCallback(verbose=1)
 
             model = PPO(
@@ -314,7 +321,10 @@ def run_combined_sweep(
             for seed in range(n_seeds):
                 print(f"\n--- Running Seed {seed+1}/{n_seeds} ---")
 
-                env = DummyVecEnv([lambda: gym.make(env_name)])
+                def make_monitor_env():
+                    return Monitor(gym.make(env_name))
+
+                env = DummyVecEnv([make_monitor_env])
                 callback = ClippingAnalysisCallback(verbose=1)
 
                 model = PPO(

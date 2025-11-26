@@ -1,6 +1,10 @@
 import gradio as gr
 import matplotlib.pyplot as plt
-from analysis_utils import analyze_results
+from analysis_utils import (
+    analyze_results,
+    analyze_clip_sweep_results_detailed,
+    analyze_combined_sweep_results,
+)
 from clipping_analysis import (
     run_experiment,
     run_clip_range_sweep,
@@ -23,11 +27,13 @@ def run_and_plot(
     if experiment_type == "Standard (vary n_epochs)":
         results = run_experiment(
             env_name=env,
-            n_epochs_list=[epochs],
+            n_epochs_list=[int(epochs)],
             total_timesteps=int(steps),
             n_seeds=1,
             clip_range=float(clip_range),
         )
+        fig = analyze_results(results)
+
     elif experiment_type == "Clip Range Sweep":
         results = run_clip_range_sweep(
             env_name=env,
@@ -36,6 +42,8 @@ def run_and_plot(
             total_timesteps=int(steps),
             n_seeds=1,
         )
+        fig = analyze_clip_sweep_results_detailed(results)
+
     elif experiment_type == "Combined Sweep (clip_range & n_epochs)":
         results = run_combined_sweep(
             env_name=env,
@@ -44,10 +52,11 @@ def run_and_plot(
             total_timesteps=int(steps),
             n_seeds=1,
         )
+        fig, _, _ = analyze_combined_sweep_results(results)
+
     else:
         raise ValueError("Unknown experiment type selected.")
 
-    fig = analyze_results(results)
     fig_path = "ppo_analysis_result.png"
     fig.savefig(fig_path, dpi=150, bbox_inches="tight")
     return fig_path

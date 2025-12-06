@@ -7,3 +7,4 @@ stable-baselines3
 gymnasium
 gradio
 scipy 
+sb3-contrib

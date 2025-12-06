@@ -10,6 +10,7 @@ from clipping_analysis import (
     run_clip_range_sweep,
     run_combined_sweep,
 )
+from trpo_comparison import run_trpo_comparison
 
 def run_and_plot(
     experiment_type,
@@ -27,7 +28,7 @@ def run_and_plot(
     if experiment_type == "Standard (vary n_epochs)":
         results = run_experiment(
             env_name=env,
-            n_epochs_list=[int(epochs)],
+            n_epochs_list=epochs_list_parsed, #read liest of numbers -> have smth to compare it with (more scientific?)
             total_timesteps=int(steps),
             n_seeds=1,
             clip_range=float(clip_range),
@@ -54,6 +55,13 @@ def run_and_plot(
         )
         fig, _, _ = analyze_combined_sweep_results(results)
 
+    elif experiment_type == "Comparison: PPO vs TRPO":
+        fig = run_trpo_comparison(
+            env_name=env,
+            steps=int(steps),
+            seeds=1
+        )
+
     else:
         raise ValueError("Unknown experiment type selected.")
 
@@ -70,10 +78,10 @@ def toggle_inputs(exp_type):
     """
     if exp_type == "Standard (vary n_epochs)":
         return (
-            gr.update(visible=True),   # clip_range
+            gr.update(visible=True),   # clip_range 
             gr.update(visible=False),  # clip_ranges
-            gr.update(visible=False),  # epochs_list
-            gr.update(visible=True),   # epochs
+            gr.update(visible=True),  # epochs_list ->Changed to true Show text box
+            gr.update(visible=False),   # epochs -> changes to falseHide epochs
         )
     if exp_type == "Clip Range Sweep":
         return (
@@ -83,12 +91,21 @@ def toggle_inputs(exp_type):
             gr.update(visible=True),   # epochs
         )
     # Combined
-    return (
-        gr.update(visible=False),  # clip_range
-        gr.update(visible=True),   # clip_ranges
-        gr.update(visible=True),   # epochs_list
-        gr.update(visible=False),  # epochs
-    )
+    if exp_type == "Combined Sweep (clip_range & n_epochs)":
+        return (
+            gr.update(visible=False),  # clip_range
+            gr.update(visible=True),   # clip_ranges
+            gr.update(visible=True),   # epochs_list
+            gr.update(visible=False),  # epochs
+        )
+
+    if exp_type == "Comparison: PPO vs TRPO":
+            return (
+                gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(visible=False),
+                gr.update(visible=False),
+            )
 
 with gr.Blocks(title="PPO Clipping Analysis Experiment Suite") as demo:
     gr.Markdown("# PPO Clipping Analysis Experiment Suite")
@@ -98,18 +115,19 @@ with gr.Blocks(title="PPO Clipping Analysis Experiment Suite") as demo:
         "- **Standard:** Vary `n_epochs` (uses a single `clip_range`).\n"
         "- **Clip Range Sweep:** Compare multiple `clip_range` values (uses a single `n_epochs`).\n"
         "- **Combined Sweep:** Explore interactions between multiple `clip_range` values **and** multiple `n_epochs`."
+        "- **Comparison:** PPO vs TRPO (The Battle of the Algorithms)."
     )
 
     with gr.Row():
         exp_type = gr.Dropdown(
-            ["Standard (vary n_epochs)", "Clip Range Sweep", "Combined Sweep (clip_range & n_epochs)"],
+            ["Standard (vary n_epochs)", "Clip Range Sweep", "Combined Sweep (clip_range & n_epochs)", "Comparison: PPO vs TRPO"],
             label="Experiment Type",
             value="Standard (vary n_epochs)",
         )
         env = gr.Textbox(label="Environment", value="CartPole-v1", scale=2)
 
     with gr.Row():
-        epochs = gr.Slider(1, 20, value=5, step=1, label="Epochs (used in Standard & Clip Range Sweep)")
+        epochs = gr.Slider(1, 20, value=10, step=1, label="Epochs (used in Standard & Clip Range Sweep)")
         steps = gr.Number(label="Total Timesteps", value=20000)
 
     with gr.Row():
@@ -122,7 +140,7 @@ with gr.Blocks(title="PPO Clipping Analysis Experiment Suite") as demo:
 
     epochs_list = gr.Textbox(
         label="Epochs List (comma-separated, used in Combined Sweep)",
-        value="3,10,20",
+        value="1,5,10,20",
         visible=False,
     )
 

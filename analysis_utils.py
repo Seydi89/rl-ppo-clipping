@@ -107,39 +107,66 @@ def analyze_results(results: List[Dict]):
     ax.set_ylabel('Final Return', fontsize=12)
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
-    # 4. KL Divergence Evolution
+    # 4. Safety Analysis (Violation Rate Bar Chart)
     ax = axes[1, 0]
-    kl_data = []
+    safety_data = []
+    kl_threshold = 0.005  # The "Danger Zone" limit ->force bars to appears with 0.5 no bars (good) as ipdates stable
+
+    # Group data by n_epochs
+    results_by_epochs = defaultdict(list)
     for res in results:
-        n_epochs = res['n_epochs']
-        kl_divs = res['callback'].update_stats['kl_divs_per_epoch']
-        for update_idx, epoch_kls in enumerate(kl_divs):
-            for epoch_idx, kl_val in enumerate(epoch_kls):
-                kl_data.append({
-                    'n_epochs': n_epochs,
-                    'Epoch within Update': epoch_idx + 1,
-                    'KL Divergence': kl_val
-                })
+        results_by_epochs[res['n_epochs']].append(res)
 
-    if kl_data:
-        df_kl = pd.DataFrame(kl_data)
-        sns.lineplot(
-            data=df_kl,
-            x='Epoch within Update',
-            y='KL Divergence',
-            hue='n_epochs',
-            marker='o',
+    for n_epochs, seed_results in sorted(results_by_epochs.items()):
+        all_kls = []
+        for res in seed_results:
+            kl_divs = res['callback'].update_stats['kl_divs_per_epoch']
+            # Flatten list of lists
+            for update in kl_divs:
+                all_kls.extend(update)
+        
+        if all_kls:
+            # Calculate Stats
+            all_kls = np.array(all_kls)
+            violation_count = np.sum(all_kls > kl_threshold)
+            violation_rate = (violation_count / len(all_kls)) * 100
+            max_kl = np.max(all_kls)
+            
+            safety_data.append({
+                'n_epochs': n_epochs,
+                'Violation Rate (%)': violation_rate,
+                'Max KL Spike': max_kl
+            })
+
+    if safety_data:
+        df_safety = pd.DataFrame(safety_data)
+        
+        # Plot the Violation Rate as bars
+        barplot = sns.barplot(
+            data=df_safety,
+            x='n_epochs',
+            y='Violation Rate (%)',
             ax=ax,
-            palette='viridis',
-            errorbar='sd'
+            palette='magma',
+            edgecolor='black'
         )
-        ax.set_yscale('log')
 
-    ax.set_title('KL Divergence Rises Across Epochs', fontsize=14)
-    ax.set_xlabel('Epoch within Update', fontsize=12)
-    ax.set_ylabel('KL Divergence (log scale)', fontsize=12)
-    ax.legend(title='n_epochs')
-    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+        # Add Annotations (Max KL) on top of bars
+        for i, p in enumerate(barplot.patches):
+            height = p.get_height()
+            max_val = df_safety.iloc[i]['Max KL Spike']
+            ax.text(
+                p.get_x() + p.get_width() / 2.,
+                height + 1,  # Slight offset above bar
+                f'Max: {max_val:.2f}',
+                ha="center", fontsize=10, color='black', fontweight='bold'
+            )
+
+    ax.set_title(f'Safety Analysis: % Updates with KL > {kl_threshold}', fontsize=14)
+    ax.set_xlabel('Number of Epochs', fontsize=12)
+    ax.set_ylabel('Danger Zone Violation Rate (%)', fontsize=12)
+    ax.set_ylim(0, 105) # Keep 0-100% scale
+    ax.grid(True, axis='y', linestyle='--', linewidth=0.5)
 
     # 5. Learning Curves
     ax = axes[1, 1]
@@ -247,19 +274,36 @@ def print_summary_results(results: List[Dict]):
 
         # Aggregate KL divergences (if available)
         try:
-            all_kls = np.array([
-                res['callback'].update_stats['kl_divs_per_epoch']
-                for res in seed_results
-                if res['callback'].update_stats['kl_divs_per_epoch']
-            ], dtype=object)
-            if all_kls.size > 0:
-                mean_kls_per_epoch = np.mean(
-                    [np.mean(epoch_kls) for res in seed_results
-                     for epoch_kls in res['callback'].update_stats['kl_divs_per_epoch']]
-                )
-                print(f"  Avg KL Divergence (across all updates): {mean_kls_per_epoch:.5f}")
+            all_kls = []
+            for res in seed_results:
+                # Flatten the list of lists
+                for update in res['callback'].update_stats['kl_divs_per_epoch']:
+                    all_kls.extend(update)
+            
+            if all_kls:
+                all_kls = np.array(all_kls)
+                
+                # Mean (Average Drift)
+                mean_kl = np.mean(all_kls)
+                
+                # Max (Worst Spike)
+                max_kl = np.max(all_kls)
+                
+                # Violation Rate (How often is it unsafe?)
+                threshold = 0.05
+                violation_count = np.sum(all_kls > threshold)
+                violation_rate = (violation_count / len(all_kls)) * 100
+                
+                print(f"  KL Divergence Stats:")
+                print(f"    - Mean KL:      {mean_kl:.5f}")
+                print(f"    - Max KL Spike: {max_kl:.4f}")
+                print(f"    - Danger Rate:  {violation_rate:.2f}% (updates > {threshold})")
+                
+                if violation_rate > 20.0:
+                    print(f"    [WARNING] High instability detected!")
+                    
         except Exception as e:
-            print(f"  [!] Could not compute KL summary: {e}")
+            print(f"  [!] KL summary error: {e}")
 
     print("\n" + "=" * 100)
     print("Summary complete.\n")

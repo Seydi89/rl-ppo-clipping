@@ -124,7 +124,12 @@ with gr.Blocks(title="PPO Clipping Analysis Experiment Suite") as demo:
             label="Experiment Type",
             value="Standard (vary n_epochs)",
         )
-        env = gr.Textbox(label="Environment", value="CartPole-v1", scale=2)
+        env = gr.Dropdown(
+            ["CartPole-v1", "HalfCheetah-v5"],
+            label="Environment",
+            value="CartPole-v1",
+            scale=2,
+        )
 
     with gr.Row():
         epochs = gr.Slider(1, 20, value=10, step=1, label="Epochs (used in Standard & Clip Range Sweep)")

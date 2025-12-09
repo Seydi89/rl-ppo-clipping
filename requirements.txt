@@ -6,5 +6,8 @@ pandas
 stable-baselines3
 gymnasium
 gradio
-scipy 
+scipy
 sb3-contrib
+# Optional/backends for additional environments
+mujoco
+imageio

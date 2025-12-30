@@ -99,8 +99,8 @@ if __name__ == "__main__":
     SEEDS = 5               
 
     # Run CartPole-v1 
-    #df_cart = collect_data("CartPole-v1", TOTAL_STEPS, SEEDS)
-    #plot_comparison(df_cart, "CartPole-v1", TOTAL_STEPS)
+    df_cart = collect_data("CartPole-v1", TOTAL_STEPS, SEEDS)
+    plot_comparison(df_cart, "CartPole-v1", TOTAL_STEPS)
 
     #  Run HalfCheetah-v5 
     try:
